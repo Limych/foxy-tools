@@ -117,7 +117,7 @@ class Fetcher
             } while (false);
         }
 
-        $proxy_hits--;
+        $this->proxyHits--;
         return $proxy;
     }
 
