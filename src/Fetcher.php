@@ -152,6 +152,11 @@ class Fetcher
         return $options;
     }
 
+    public function httpCode()
+    {
+        return \curl_getinfo($this->curl, CURLINFO_HTTP_CODE);
+    }
+
     public function fetch($url)
     {
         static $errors = 0;
