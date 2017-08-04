@@ -41,6 +41,8 @@ class Fetcher
     );
 
     protected $curl;
+    protected $lastProxy;
+    protected $lastUserAgent;
 
     public function __construct(array $config = array())
     {
@@ -120,20 +122,6 @@ class Fetcher
         return $proxy;
     }
 
-    public function getUserAgent()
-    {
-        static $ua;
-        static $ua_hits;
-
-        if ($ua_hits <= 0) {
-            $ua = UserAgents::getRandom();
-            $ua_hits = rand(3, 30);
-        }
-
-        $ua_hits--;
-        return $ua;
-    }
-
     public function fetch($url)
     {
         if (false === filter_var($url, FILTER_VALIDATE_URL)) {
@@ -142,7 +130,6 @@ class Fetcher
 
         $options = array(
             CURLOPT_URL => $url,
-            CURLOPT_USERAGENT => $this->getUserAgent(),
             CURLOPT_TIMEOUT => $this->config['timeout'],
             CURLOPT_CONNECTTIMEOUT => $this->config['timeout'],
             CURLOPT_RETURNTRANSFER => true,
@@ -159,6 +146,11 @@ class Fetcher
         } elseif (! empty($this->config['requireProxy'])) {
             throw new \Exception('There are no working proxies in list!');
         }
+        if ($this->lastProxy !== $proxy) {
+            $this->lastProxy = $proxy;
+            $this->lastUserAgent = UserAgents::getRandom();
+        }
+        $options[CURLOPT_USERAGENT] = $this->lastUserAgent;
 
         \curl_setopt_array($this->curl, $options);
 
