@@ -41,8 +41,6 @@ class Fetcher
     );
 
     protected $curl;
-    protected $lastProxy;
-    protected $lastUserAgent;
 
     public function __construct(array $config = array())
     {
@@ -83,18 +81,19 @@ class Fetcher
         }
     }
 
+    protected $proxyHits = 0;
+
     public function getProxy()
     {
         static $FoxyTools;
         static $proxy;
-        static $proxy_hits = 0;
 
-        if ($proxy_hits <= 0) {
+        if ($this->proxyHits <= 0) {
             do {
                 if (! empty($cnt = count($this->config['proxies']))) {
                     $key = rand(0, $cnt - 1);
                     $proxy = $this->config['proxies'][$key];
-                    $proxy_hits = rand(3, 30);
+                    $this->proxyHits = rand(3, 30);
 
                     // Check proxy
                     if (! empty($this->config['proxyPingUrl'])) {
@@ -122,8 +121,41 @@ class Fetcher
         return $proxy;
     }
 
+    public function forceChangeIdentity()
+    {
+        $this->proxyHits = 0;
+    }
+
+    protected $lastProxy;
+    protected $lastUserAgent;
+    protected $identityHits;
+
+    public function getCurlIdentity()
+    {
+        $options = array();
+
+        $proxy = $this->getProxy();
+        if (! empty($proxy)) {
+            $options = array_replace($options, ProxyChecker::getCurlProxyOptions($proxy));
+        } elseif (! empty($this->config['requireProxy'])) {
+            throw new \Exception('There are no working proxies in list!');
+        }
+        if ($this->lastProxy !== $proxy) {
+            $this->lastProxy = $proxy;
+            $this->lastUserAgent = UserAgents::getRandom();
+            $this->identityHits = 0;
+        }
+        $options[CURLOPT_USERAGENT] = $this->lastUserAgent;
+
+        $this->identityHits++;
+
+        return $options;
+    }
+
     public function fetch($url)
     {
+        static $errors = 0;
+
         if (false === filter_var($url, FILTER_VALIDATE_URL)) {
             throw new \InvalidArgumentException('Page URL MUST be defined.');
         }
@@ -140,21 +172,17 @@ class Fetcher
             CURLOPT_AUTOREFERER => true,
             CURLOPT_MAXREDIRS => 20,
         );
-        $proxy = $this->getProxy();
-        if (! empty($proxy)) {
-            $options = array_replace($options, ProxyChecker::getCurlProxyOptions($proxy));
-        } elseif (! empty($this->config['requireProxy'])) {
-            throw new \Exception('There are no working proxies in list!');
-        }
-        if ($this->lastProxy !== $proxy) {
-            $this->lastProxy = $proxy;
-            $this->lastUserAgent = UserAgents::getRandom();
-        }
-        $options[CURLOPT_USERAGENT] = $this->lastUserAgent;
+        $options = array_replace($options, $this->getCurlIdentity());
 
         \curl_setopt_array($this->curl, $options);
 
+        if ($this->identityHits <= 1) {
+            $errors = 0;
+        }
         if (false === $content = \curl_exec($this->curl)) {
+            if (++$errors >= 3) {
+                $this->forceChangeIdentity();
+            }
             throw new \Exception(\curl_error($this->curl), \curl_errno($this->curl));
         }
 
