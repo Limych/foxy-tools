@@ -5,7 +5,7 @@ _“I solemnly swear that I am planning a prank, and only prank…”_
 [![Dependency Status](https://www.versioneye.com/user/projects/598595d20fb24f006398ac6a/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/598595d20fb24f006398ac6a)
 [![Packagist](https://img.shields.io/packagist/v/limych/foxy-tools.svg)](https://packagist.org/packages/limych/foxy-tools)
 [![Packagist](https://img.shields.io/packagist/vpre/limych/foxy-tools.svg)](https://packagist.org/packages/limych/foxy-tools)
-[![license](https://img.shields.io/github/license/Limych/foxy-tools.svg)]()
+[![license](https://img.shields.io/github/license/Limych/foxy-tools.svg)](https://github.com/Limych/foxy-tools/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/Limych/foxy-tools.svg)](https://github.com/Limych/foxy-tools/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/Limych/foxy-tools.svg)](https://github.com/Limych/foxy-tools/pulls)
 
