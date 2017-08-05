@@ -264,23 +264,23 @@ class ProxyChecker
             $found = false;
             switch ($test) {
                 case 'get':
-                    $value = $ping['_GET'][$this->config['request']['get_name']];
+                    $value = @$ping['_GET'][$this->config['request']['get_name']];
                     $found = (! empty($value) && ($value === $this->config['request']['get_value']));
                     break;
                 case 'post':
-                    $value = $ping['_POST'][$this->config['request']['post_name']];
+                    $value = @$ping['_POST'][$this->config['request']['post_name']];
                     $found = (! empty($value) && ($value === $this->config['request']['post_value']));
                     break;
                 case 'cookie':
-                    $value = $ping['_COOKIE'][$this->config['request']['cookie_name']];
+                    $value = @$ping['_COOKIE'][$this->config['request']['cookie_name']];
                     $found = (! empty($value) && ($value === $this->config['request']['cookie_value']));
                     break;
                 case 'referer':
-                    $value = $ping['_SERVER']['HTTP_REFERER'];
+                    $value = @$ping['_SERVER']['HTTP_REFERER'];
                     $found = (! empty($value) && ($value === $this->config['request']['referer']));
                     break;
                 case 'user_agent':
-                    $value = $ping['_SERVER']['HTTP_USER_AGENT'];
+                    $value = @$ping['_SERVER']['HTTP_USER_AGENT'];
                     $found = (! empty($value) && ($value === $this->config['request']['user_agent']));
                     break;
             }
