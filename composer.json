@@ -12,7 +12,12 @@
 		}
 	},
 	"keywords" : [
-		"proxychecker"
+		"proxychecker",
+		"proxy-checker",
+		"user-agent",
+		"useragent",
+		"bot",
+		"toolkit"
 	],
 	"homepage" : "https://github.com/Limych/foxy-tools",
 	"support" : {
@@ -24,5 +29,6 @@
 			"email" : "andrey@khrolenok.ru",
 			"homepage" : "https://github.com/Limych"
 		}
-	]
+	],
+	"description" : "\u201CI solemnly swear that I am planning a prank, and only prank\u2026\u201D"
 }

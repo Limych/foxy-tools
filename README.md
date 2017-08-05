@@ -1,6 +1,8 @@
 # Foxy-Tools
 
-_“I solemnly swear that I am planning a prank, and only prank!”_
+_“I solemnly swear that I am planning a prank, and only prank…”_
+
+[![Dependency Status](https://www.versioneye.com/user/projects/598595d20fb24f006398ac6a/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/598595d20fb24f006398ac6a)
 
 Foxy-Tools — is a set of PHP-tools for not quite legal cases on the web.
 
