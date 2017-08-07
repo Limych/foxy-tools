@@ -2,10 +2,11 @@
 
 _“I solemnly swear that I am planning a prank, and only prank…”_
 
+[![Latest Stable Version](https://poser.pugx.org/limych/foxy-tools/v/stable)](https://packagist.org/packages/limych/foxy-tools)
+[![Latest Unstable Version](https://poser.pugx.org/limych/foxy-tools/v/unstable)](https://packagist.org/packages/limych/foxy-tools)
+[![License](https://poser.pugx.org/limych/foxy-tools/license)](https://packagist.org/packages/limych/foxy-tools/blob/master/LICENSE)
+[![composer.lock](https://poser.pugx.org/limych/foxy-tools/composerlock)](https://packagist.org/packages/limych/foxy-tools)
 [![Dependency Status](https://www.versioneye.com/user/projects/598595d20fb24f006398ac6a/badge.svg?style=flat-square)](https://www.versioneye.com/user/projects/598595d20fb24f006398ac6a)
-[![Packagist](https://img.shields.io/packagist/v/limych/foxy-tools.svg)](https://packagist.org/packages/limych/foxy-tools)
-[![Packagist](https://img.shields.io/packagist/vpre/limych/foxy-tools.svg)](https://packagist.org/packages/limych/foxy-tools)
-[![license](https://img.shields.io/github/license/Limych/foxy-tools.svg)](https://github.com/Limych/foxy-tools/blob/master/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/Limych/foxy-tools.svg)](https://github.com/Limych/foxy-tools/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/Limych/foxy-tools.svg)](https://github.com/Limych/foxy-tools/pulls)
 
@@ -16,7 +17,7 @@ Foxy-Tools — is a set of PHP-tools for not quite legal cases on the web.
 
 [**Composer**](https://getcomposer.org/) is the recommended way to install Foxy-Tools. Alternatively, if you prefer not to use Composer, but want to install Foxy-Tools, you can do so by doing a direct download.
 
-Currently, Foxy-Tools is available at [https://packagist.org](https://packagist.org/packages/limych/foxy-tools). To use it in your project, you need to include it as a dependency in your project composer.json file.
+Currently, Foxy-Tools is available at [packagist.org](https://packagist.org/packages/limych/foxy-tools). To use it in your project, you need to include it as a dependency in your project composer.json file.
 
 ## Instructions
 1. Download [Composer](https://getcomposer.org/download/) if not already installed
