@@ -83,7 +83,7 @@ class MsCsv
         if (self::isAssoc($headers)) {
             $headers = array_keys($headers);
         }
-        self::fPut($handle, $headers);
+        self::fPutCsv($handle, $headers);
     }
 
     /**
@@ -93,7 +93,7 @@ class MsCsv
      * @param array $fields Array to write to file
      * @return boolean|number Number of written chars, false on error.
      */
-    public static function fPut($handle, array $fields)
+    public static function fPutCsv($handle, array $fields)
     {
         if (self::isAssoc($fields)) {
             $fields = array_values($fields);
@@ -122,7 +122,7 @@ class MsCsv
      * @return array|null|false An indexed array containing the fields read.<br/><br/>
      * A blank line in a CSV file will be returned as an array comprising a single null field, and will not be treated as an error.
      */
-    public static function fGet($handle)
+    public static function fGetCsv($handle)
     {
         $seek = ftell($handle);
         $input = fgets($handle);
@@ -141,7 +141,7 @@ class MsCsv
      * @return array An indexed array containing the fields read.<br/><br/>
      * A blank line in a CSV file will be returned as an array comprising a single null field, and will not be treated as an error.
      */
-    public static function strGet($input)
+    public static function strGetCsv($input)
     {
         $csv_arr = str_getcsv($input, self::$delimiter, self::$enclosure, self::$escape);
         return ($csv_arr);
@@ -156,19 +156,19 @@ class MsCsv
      * @param boolean $getHeaders
      * @return number|null|false Returns null if an invalid handle is supplied or false on other errors.
      */
-    public static function fGetIterated($handle, callable $callback, $startId = null, $getHeaders = false)
+    public static function fGetCsvIterated($handle, callable $callback, $startId = null, $getHeaders = false)
     {
         $headers = array();
         if (false != $getHeaders) {
             $seek = ftell($handle);
             fseek($handle, 0, SEEK_SET);
-            if (is_array($res = self::fGet($handle))) {
+            if (is_array($res = self::fGetCsv($handle))) {
                 $headers = $res;
             }
             fseek($handle, $seek, SEEK_SET);
         }
         $cnt = 0;
-        while (is_array($record = self::fGet($handle))) {
+        while (is_array($record = self::fGetCsv($handle))) {
             if ((null !== $startId) && ($startId > $record[0])) {
                 continue;
             }
@@ -229,10 +229,10 @@ class MsCsv
      * @param resource $handle File handler
      * @return string Last line of file
      */
-    public static function fGetLast($handle)
+    public static function fGetCsvLastLine($handle)
     {
         $record = self::fGetLastLine($handle);
-        $record = self::strGet($record);
+        $record = self::strGetCsv($record);
 
         return $record;
     }
