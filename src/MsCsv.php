@@ -231,8 +231,38 @@ class MsCsv
      */
     public static function fGetCsvLastLine($handle)
     {
-        $record = self::fGetLastLine($handle);
-        $record = self::strGetCsv($record);
+        $line = '';
+        $cursor = -1;
+        $seek = ftell($handle);
+
+        /**
+         * Trim trailing newline chars of the file
+         */
+        while (true) {
+            fseek($handle, $cursor--, SEEK_END);
+            $char = fgetc($handle);
+            if ($char !== "\n" && $char !== "\r") {
+                break;
+            }
+            $line = $char . $line;
+        }
+
+        /**
+         * Read until the start of file or first newline char (but skip quoted new line chars)
+         */
+        $inQuotes = false;
+        while ($char !== false && ($inQuotes || ($char !== "\n" && $char !== "\r"))) {
+            if ($char === self::$enclosure) {
+                $inQuotes = ! $inQuotes;
+            }
+            $line = $char . $line;
+            fseek($handle, $cursor--, SEEK_END);
+            $char = fgetc($handle);
+        }
+
+        fseek($handle, $seek, SEEK_SET);
+
+        $record = self::strGetCsv($line);
 
         return $record;
     }
