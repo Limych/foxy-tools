@@ -209,11 +209,11 @@ class Fetcher
      * Fetch content by URL
      *
      * @param string $url
-     * @param array $config
      * @param array $postFields
+     * @param array $config
      * @return string
      */
-    public static function fetchUrl($url, array $config = array(), array $postFields = array())
+    public static function fetchUrl($url, array $postFields = array(), array $config = array())
     {
         $fetcher = new self($config);
         return $fetcher->fetch($url, $postFields);
