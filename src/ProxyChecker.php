@@ -296,26 +296,14 @@ class ProxyChecker
         if (false === strpos($content, $this->selfIp)) {
             $proxyLevel = 'anonymous';
 
-            $proxyDetection = array(
-                'HTTP_X_REAL_IP',
-                'HTTP_X_FORWARDED_FOR',
-                'HTTP_X_PROXY_ID',
-                'HTTP_VIA',
-                'HTTP_X_FORWARDED_FOR',
-                'HTTP_FORWARDED_FOR',
-                'HTTP_X_FORWARDED',
-                'HTTP_FORWARDED',
-                'HTTP_CLIENT_IP',
-                'HTTP_FORWARDED_FOR_IP',
-                'VIA',
-                'X_FORWARDED_FOR',
-                'FORWARDED_FOR',
-                'X_FORWARDED FORWARDED',
-                'CLIENT_IP',
-                'FORWARDED_FOR_IP',
-                'HTTP_PROXY_CONNECTION',
-                'HTTP_XROXY_CONNECTION'
+            $proxyDetection = explode(
+                ' ',
+                'HTTP_X_FORWARDED_FOR HTTP_X_FORWARDED HTTP_FORWARDED_FOR HTTP_FORWARDED HTTP_X_REAL_IP ' .
+                'HTTP_CLIENT_IP HTTP_CF_CONNECTING_IP CLIENT_IP HTTP_X_PROXY_ID X_FORWARDED_FOR ' .
+                'FORWARDED_FOR HTTP_FORWARDED_FOR_IP FORWARDED_FOR_IP HTTP_X_CLUSTER_CLIENT_IP ' .
+                'HTTP_PROXY_CONNECTION X_FORWARDED HTTP_VIA VIA FORWARDED'
             );
+
             if (empty(array_intersect(array_keys($ping['_SERVER']), $proxyDetection))) {
                 $proxyLevel = 'elite';
             }

@@ -38,6 +38,7 @@ class Fetcher
         'proxylistUrl'          => null,
         'proxyPingUrl'          => null,
         'allowedProxyLevels'    => array('anonymous', 'elite'),
+        'userAgent'             => null,
     );
 
     protected $curl;
@@ -142,8 +143,12 @@ class Fetcher
         }
         if ($this->lastProxy !== $proxy) {
             $this->lastProxy = $proxy;
-            $this->lastUserAgent = UserAgents::getRandom();
             $this->identityHits = 0;
+            if (! empty($this->config['userAgent'])) {
+                $this->lastUserAgent = $this->config['userAgent'];
+            } else {
+                $this->lastUserAgent = UserAgents::getRandom();
+            }
         }
         $options[CURLOPT_USERAGENT] = $this->lastUserAgent;
 
@@ -157,7 +162,7 @@ class Fetcher
         return \curl_getinfo($this->curl, CURLINFO_HTTP_CODE);
     }
 
-    public function fetch($url)
+    public function fetch($url, array $postFields = array())
     {
         static $errors = 0;
 
@@ -179,6 +184,12 @@ class Fetcher
         );
         $options = array_replace($options, $this->getCurlIdentity());
 
+        if (! empty($postFields)) {
+            $options['CURLOPT_POST'] = true;
+            $options['CURLOPT_POSTFIELDS'] = $postFields;
+            $options['CURLOPT_POSTREDIR'] = 3;
+        }
+
         \curl_setopt_array($this->curl, $options);
 
         if ($this->identityHits <= 1) {
@@ -192,5 +203,19 @@ class Fetcher
         }
 
         return $content;
+    }
+
+    /**
+     * Fetch content by URL
+     *
+     * @param string $url
+     * @param array $config
+     * @param array $postFields
+     * @return string
+     */
+    public static function fetchUrl($url, array $config = array(), array $postFields = array())
+    {
+        $fetcher = new self($config);
+        return $fetcher->fetch($url, $postFields);
     }
 }
