@@ -185,9 +185,9 @@ class Fetcher
         $options = array_replace($options, $this->getCurlIdentity());
 
         if (! empty($postFields)) {
-            $options['CURLOPT_POST'] = true;
-            $options['CURLOPT_POSTFIELDS'] = $postFields;
-            $options['CURLOPT_POSTREDIR'] = 3;
+            $options[CURLOPT_POST] = true;
+            $options[CURLOPT_POSTFIELDS] = $postFields;
+            $options[CURLOPT_POSTREDIR] = 3;
         }
 
         \curl_setopt_array($this->curl, $options);
