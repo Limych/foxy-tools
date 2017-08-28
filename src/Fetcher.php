@@ -218,7 +218,7 @@ class Fetcher
             throw new \Exception(\curl_error($this->curl), \curl_errno($this->curl));
         }
         
-        $headers_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $headers_size = curl_getinfo($this->curl, CURLINFO_HEADER_SIZE);
         $headers = substr($content, 0, $headers_size);
         $content = substr($content, $headers_size);
         
