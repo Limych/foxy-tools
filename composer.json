@@ -6,6 +6,9 @@
 	"require" : {
 		"php" : ">=5.3"
 	},
+	"require-dev" : {
+		"doctrine/cache" : "~1.6"
+	},
 	"autoload" : {
 		"psr-4" : {
 			"FoxyTools\\" : "src"
