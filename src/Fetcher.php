@@ -171,11 +171,14 @@ class Fetcher
         if (false === filter_var($url, FILTER_VALIDATE_URL)) {
             throw new \InvalidArgumentException('Page URL MUST be defined.');
         }
-        
+
         $cache_id = hash('sha256', $url . json_encode($postFields));
-        
-        /** @var \FoxyTools\FetcherCacheInterface $cache */
-        if (empty($cache = $this->config['cache']) || ! $cache instanceof FetcherCacheInterface) {
+
+        /** @var FetcherCacheInterface $cache */
+        if (empty($cache = $this->config['cache']) || (
+            ! $cache instanceof FetcherCacheInterface
+            && ! $cache instanceof \Doctrine\Common\Cache\Cache
+        )) {
             $cache = null;
         }
         if ($cache) {
@@ -217,11 +220,11 @@ class Fetcher
             }
             throw new \Exception(\curl_error($this->curl), \curl_errno($this->curl));
         }
-        
+
         $headers_size = curl_getinfo($this->curl, CURLINFO_HEADER_SIZE);
         $headers = substr($content, 0, $headers_size);
         $content = substr($content, $headers_size);
-        
+
         $headers = $this->parseCurlHeaders($headers);
         $headers = end($headers);
 
@@ -235,13 +238,13 @@ class Fetcher
             if (isset($headers['expires']) && isset($headers['date'])) {
                 $now = \DateTime::createFromFormat(\DateTime::RFC2822, $headers['date'])->getTimestamp();
                 $exp = \DateTime::createFromFormat(\DateTime::RFC2822, $headers['expires'])->getTimestamp();
-                
+
                 $lifetime[] = $exp - $now;
             }
-            
+
             $cache->save($cache_id, $content, max($lifetime));
         }
-        
+
         return $content;
     }
 
@@ -258,14 +261,14 @@ class Fetcher
         $fetcher = new self($config);
         return $fetcher->fetch($url, $postFields);
     }
-    
+
     protected function parseCurlHeaders($headerContent)
     {
         $headers = array();
-        
+
         // Split the string on every "double" new line.
         $arrRequests = explode("\r\n\r\n", $headerContent);
-        
+
         // Loop of response headers. The "count() - 1" is to
         // avoid an empty row for the extra line break before the body of the response.
         for ($index = 0; $index < count($arrRequests) - 1; $index++) {
@@ -278,7 +281,7 @@ class Fetcher
                 }
             }
         }
-        
+
         return $headers;
     }
 }

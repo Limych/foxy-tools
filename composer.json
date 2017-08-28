@@ -4,9 +4,7 @@
 	"minimum-stability" : "stable",
 	"license" : "MIT",
 	"require" : {
-		"php" : ">=5.3"
-	},
-	"require-dev" : {
+		"php" : ">=5.3",
 		"doctrine/cache" : "~1.6"
 	},
 	"autoload" : {
