@@ -4,8 +4,13 @@
 	"minimum-stability" : "stable",
 	"license" : "MIT",
 	"require" : {
-		"php" : ">=5.3",
+		"php" : ">=5.3"
+	},
+	"require-dev" : {
 		"doctrine/cache" : "~1.6"
+	},
+	"suggest" : {
+		"doctrine/cache" : "Allow cache http-requests by Fetcher."
 	},
 	"autoload" : {
 		"psr-4" : {

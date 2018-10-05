@@ -28,6 +28,8 @@
  */
 namespace FoxyTools;
 
+use Doctrine\Common\Cache\Cache;
+
 class Fetcher
 {
 
@@ -67,7 +69,8 @@ class Fetcher
                 $list = array($list);
             }
             foreach ($list as $url) {
-                if (! empty($proxies = @file_get_contents($url))) {
+                $proxies = @file_get_contents($url);
+                if (! empty($proxies)) {
                     $proxies = preg_split('/\s+/', $proxies, null, PREG_SPLIT_NO_EMPTY);
                     $this->config['proxies'] = array_unique(array_merge($this->config['proxies'], $proxies));
                 }
@@ -88,12 +91,12 @@ class Fetcher
 
     public function getProxy()
     {
-        static $FoxyTools;
         static $proxy;
 
         if ($this->proxyHits <= 0) {
             do {
-                if (! empty($cnt = count($this->config['proxies']))) {
+                $cnt = count($this->config['proxies']);
+                if (! empty($cnt)) {
                     $key = rand(0, $cnt - 1);
                     $proxy = $this->config['proxies'][$key];
                     $this->proxyHits = rand(3, 30);
@@ -175,10 +178,8 @@ class Fetcher
         $cache_id = hash('sha256', $url . json_encode($postFields));
 
         /** @var FetcherCacheInterface $cache */
-        if (empty($cache = $this->config['cache']) || (
-            ! $cache instanceof FetcherCacheInterface
-            && ! $cache instanceof \Doctrine\Common\Cache\Cache
-        )) {
+        $cache = empty($this->config['cache']) ? null : $this->config['cache'];
+        if (! $cache instanceof FetcherCacheInterface && ! $cache instanceof Cache) {
             $cache = null;
         }
         if ($cache) {

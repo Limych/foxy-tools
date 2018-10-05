@@ -22,6 +22,7 @@ tmp/
 .svn
 
 
+
 #################
 ## Eclipse
 #################
@@ -51,3 +52,10 @@ local.properties
 
 # PDT-specific
 .buildpath
+
+
+
+#################
+## PhpStorm
+#################
+/.idea/

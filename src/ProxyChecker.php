@@ -36,10 +36,12 @@ namespace FoxyTools;
 class ProxyChecker
 {
 
-    const PING_KEY          = '7771977160ce33a19a00d3422e19c6e8';
-    const PING_CRYPT        = 'aes-256-ctr';
-    const PING_CHECK        = 'ProxyChecker Ping';
-    const PING_SEPARATOR    = '=||=';
+    const PING_KEY       = '7771977160ce33a19a00d3422e19c6e8';
+    const PING_CRYPT     = 'aes-256-ctr';
+    const PING_CHECK     = 'ProxyChecker Ping';
+    const PING_SEPARATOR = '=||=';
+
+    const DETECTING_TIMEOUT = 1;
 
     protected $config = array(
         'pingUrl'   => null,
@@ -115,7 +117,8 @@ class ProxyChecker
         }
 
         if(empty($this->selfIp)) {
-            if (! empty($res = file_get_contents($this->config['pingUrl']))
+            $res = file_get_contents($this->config['pingUrl']);
+            if (! empty($res)
                 && (false !== filter_var($res = strtok($res, self::PING_SEPARATOR), FILTER_VALIDATE_IP))
             ) {
                 $this->selfIp = $res;
@@ -124,17 +127,51 @@ class ProxyChecker
             }
         }
 
+        $parsed = self::parseProxyUrl($proxy);
+        if ($parsed) {
+            if (empty($parsed['scheme'])) {
+                $parsed['scheme'] = self::detectProxyType($parsed['host'], $parsed['port']);
+            }
+            if (empty($parsed['scheme'])) {
+                $parsed['scheme'] = 'http';
+            }
+            $proxy = $parsed['scheme'] . '://' .
+                (empty($parsed['user_pass']) ? '' : $parsed['user_pass'] . '@') .
+                $parsed['host_port'];
+        }
+
         list ($content, $info) = $this->getProxyContent($proxy);
 
-        return $this->checkProxyContent($content, $info);
+        $proxyInfo = $this->checkProxyContent($content, $info);
+        $proxyInfo['proxy'] = $proxy;
+
+        return $proxyInfo;
+    }
+
+    protected static function parseProxyUrl($url)
+    {
+        $parsed = parse_url($url);
+        if (is_array($parsed)) {
+            if (isset($parsed['user']) && isset($parsed['pass'])) {
+                $parsed['user_pass'] = $parsed['user'] . ':' . $parsed['pass'];
+            }
+            if (isset($parsed['host']) && isset($parsed['port'])) {
+                $parsed['host_port'] = $parsed['host'] . ':' . $parsed['port'];
+            }
+        }
+        return $parsed;
     }
 
     public static function getCurlProxyOptions($proxy)
     {
         $options = array();
-        if (preg_match('!^(?:([^:]+)://|//)?(?:([^@]+)@)?([^/]+)!', $proxy, $parsed)) {
+        $parsed = self::parseProxyUrl($proxy);
+        if ($parsed) {
+            if (empty($parsed['scheme'])) {
+                $parsed['scheme'] = self::detectProxyType($parsed['host'], $parsed['port']);
+            }
             // Proxy type
-            switch ($parsed[1]) {
+            switch ($parsed['scheme']) {
                 case 'http':
                     $options[CURLOPT_PROXYTYPE] = CURLPROXY_HTTP;
                     break;
@@ -147,12 +184,12 @@ class ProxyChecker
             }
 
             // Proxy host
-            $options[CURLOPT_PROXY] = $parsed[3];
+            $options[CURLOPT_PROXY] = $parsed['host_port'];
 
             // Proxy authentification
-            if (! empty($parsed[2])) {
+            if (! empty($parsed['user_pass'])) {
                 $options[CURLOPT_PROXYAUTH] = CURLAUTH_BASIC;
-                $options[CURLOPT_PROXYUSERPWD] = $parsed[2];
+                $options[CURLOPT_PROXYUSERPWD] = $parsed['user_pass'];
             }
         }
 
@@ -228,20 +265,37 @@ class ProxyChecker
         return array($content, $info);
     }
 
+    public static function hasProxyHeaders($headers = null)
+    {
+        if (empty($headers)) {
+            $headers = $_SERVER;
+        }
+
+        $found = array_intersect(array_keys($headers), explode(
+            ' ',
+            'HTTP_X_FORWARDED_FOR HTTP_X_FORWARDED HTTP_FORWARDED_FOR HTTP_FORWARDED HTTP_X_REAL_IP ' .
+            'HTTP_CLIENT_IP HTTP_CF_CONNECTING_IP CLIENT_IP HTTP_X_PROXY_ID X_FORWARDED_FOR ' .
+            'FORWARDED_FOR HTTP_FORWARDED_FOR_IP FORWARDED_FOR_IP HTTP_X_CLUSTER_CLIENT_IP ' .
+            'HTTP_PROXY_CONNECTION X_FORWARDED HTTP_VIA VIA FORWARDED'
+        ));
+
+        return ! empty($found);
+    }
+
     protected function checkProxyContent($content, $info)
     {
         if (empty($content)) {
             throw new \Exception('Empty content');
         }
 
-        $content = explode(self::PING_SEPARATOR, $content, 2);
-        if (empty($content[1])) {
+        $res = explode(self::PING_SEPARATOR, $content, 2);
+        if (empty($res[1])) {
             throw new \Exception('Wrong content');
         }
-        $content = $content[1];
+        $content = $res[1];
 
         if (! empty($this->config['pingKey'])) {
-            $content = openssl_decrypt($content, self::PING_CRYPT, $this->config['pingKey']);
+            $content = @openssl_decrypt($content, self::PING_CRYPT, $this->config['pingKey']);
         }
 
         $ping = json_decode($content, true);
@@ -249,7 +303,7 @@ class ProxyChecker
         if (null === $ping) {
             throw new \Exception('Wrong ping key');
         } elseif (empty($ping['check']) || ($ping['check'] !== self::PING_CHECK)) {
-            throw new \Exception('Wrong content');
+            throw new \Exception('Wrong ping check code');
         }
 
         if (200 !== $info['http_code']) {
@@ -292,22 +346,13 @@ class ProxyChecker
         }
 
         // Detect proxy level
-        $proxyLevel = 'transparent';
-        if (false === strpos($content, $this->selfIp)) {
-            $proxyLevel = 'anonymous';
-
-            $proxyDetection = explode(
-                ' ',
-                'HTTP_X_FORWARDED_FOR HTTP_X_FORWARDED HTTP_FORWARDED_FOR HTTP_FORWARDED HTTP_X_REAL_IP ' .
-                'HTTP_CLIENT_IP HTTP_CF_CONNECTING_IP CLIENT_IP HTTP_X_PROXY_ID X_FORWARDED_FOR ' .
-                'FORWARDED_FOR HTTP_FORWARDED_FOR_IP FORWARDED_FOR_IP HTTP_X_CLUSTER_CLIENT_IP ' .
-                'HTTP_PROXY_CONNECTION X_FORWARDED HTTP_VIA VIA FORWARDED'
-            );
-
-            if (empty(array_intersect(array_keys($ping['_SERVER']), $proxyDetection))) {
-                $proxyLevel = 'elite';
-            }
-        }
+        $proxyLevel = ( false !== strpos($content, $this->selfIp)
+            ? 'transparent'
+            : ( self::hasProxyHeaders($ping['_SERVER'])
+                ? 'anonymous'
+                : 'elite'
+            )
+        );
 
         return array(
             'allowed' => $allowed,
@@ -333,7 +378,7 @@ class ProxyChecker
         @header("Cache-Control: post-check=0, pre-check=0", false);
         @header("Pragma: no-cache");
 
-        $output .= json_encode(array(
+        $output = json_encode(array(
             'check'     => self::PING_CHECK,
             '_SERVER'   => $_SERVER,
             '_GET'      => $_GET,
@@ -342,9 +387,121 @@ class ProxyChecker
         ));
 
         if (! empty($pingKey)) {
-            $output = openssl_encrypt($output, self::PING_CRYPT, $pingKey);
+            $output = @openssl_encrypt($output, self::PING_CRYPT, $pingKey);
         }
 
         die($_SERVER['REMOTE_ADDR'] . self::PING_SEPARATOR . $output);
+    }
+
+    public static function isSocks5($host, $port = 1080, $timeout = self::DETECTING_TIMEOUT)
+    {
+        if (false !== strpos($host, ':')) {
+            $parsed = self::parseProxyUrl($host);
+            $host = $parsed['host'];
+            $port = $parsed['port'];
+        }
+
+        $fp = @fsockopen($host, $port, $errno, $errstr, $timeout);
+        if (!$fp) {
+            return false;
+        }
+
+        stream_set_timeout($fp, $timeout);
+
+        fwrite($fp, "\x05\x01\x00");
+
+        $res = fread($fp, 2);
+        fclose($fp);
+
+        if (empty($res)) {
+            return false;
+        }
+
+        return ($res === "\x05\x00");
+    }
+
+    public static function isSocks4($host, $port = 1080, $timeout = self::DETECTING_TIMEOUT)
+    {
+        if (false !== strpos($host, ':')) {
+            $parsed = self::parseProxyUrl($host);
+            $host = $parsed['host'];
+            $port = $parsed['port'];
+        }
+
+        $fp = @fsockopen($host, $port, $errno, $errstr, $timeout);
+        if (!$fp) {
+            return false;
+        }
+
+        stream_set_timeout($fp, $timeout);
+
+        fwrite($fp, "\x04\x01" . pack("n", $port) . pack("H*", dechex(ip2long($host))) . "\x00");
+
+        $res = fread($fp, 9);
+        fclose($fp);
+
+        return ! empty($res) && (strlen($res) == 8) && $res[0] == "\x00" && ($res[1] == "\x5A");
+    }
+
+    public static function isHttp($host, $port = 3128, $timeout = self::DETECTING_TIMEOUT)
+    {
+        if (false !== strpos($host, ':')) {
+            $parsed = self::parseProxyUrl($host);
+            $host = $parsed['host'];
+            $port = $parsed['port'];
+        }
+
+        $fp = @fsockopen($host, $port, $errno, $errstr, $timeout);
+        if (!$fp) {
+            return false;
+        }
+
+        stream_set_timeout($fp, $timeout);
+
+        fwrite($fp, "GET / HTTP/1.1\r\nHost: wikipedia.org\r\n\r\n");
+
+        $res = fread($fp, 9);
+        fclose($fp);
+
+        return ! empty($res) && (strlen($res) == 9) && ($res == "HTTP/1.1 ");
+    }
+
+    public static function detectProxyType($host, $port = 3128, $timeout = self::DETECTING_TIMEOUT)
+    {
+        if (false !== strpos($host, ':')) {
+            $parsed = self::parseProxyUrl($host);
+            $host = $parsed['host'];
+            $port = $parsed['port'];
+        }
+
+        if (self::isSocks5($host, $port, $timeout)) {
+            return 'socks5';
+        } elseif (self::isSocks4($host, $port, $timeout)) {
+            return 'socks4';
+        } elseif (self::isHttp($host, $port, $timeout)) {
+            return 'http';
+        }
+
+        return null;
+    }
+
+    public static function portscan($host = null, $timeout = self::DETECTING_TIMEOUT)
+    {
+        if (empty($host)) {
+            $host = $_SERVER['REMOTE_ADDR'];
+        }
+
+        $proxies = array();
+
+        $ports = array(8080, 80, 81, 1080, 6588, 8000, 3128, 553, 554, 4480);
+        shuffle($ports);
+        foreach($ports as $port) {
+            $type = self::detectProxyType($host, $port, $timeout);
+            if ($type) {
+                $proxies[] = "$type://$host:$port";
+            }
+        }
+
+        return $proxies;
     }
 }

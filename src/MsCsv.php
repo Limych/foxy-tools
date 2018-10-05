@@ -52,7 +52,7 @@ class MsCsv
      * @param mixed $array
      * @return boolean
      */
-    public static function isAssoc($array)
+    protected static function isAssoc($array)
     {
         if (! is_array($array) || array() === $array) {
             return false;
@@ -62,6 +62,8 @@ class MsCsv
 
     /**
      * Write UTF-8 BOM to file.
+     *
+     * @param resource $handle
      */
     public static function fPutBom($handle)
     {
@@ -180,7 +182,7 @@ class MsCsv
                 return $cnt;
             }
         }
-        if (feof($handler)) {
+        if (feof($handle)) {
             return $cnt;
         }
         return $record;
@@ -201,6 +203,7 @@ class MsCsv
         /**
          * Trim trailing newline chars of the file
          */
+        $char = null;
         while (true) {
             fseek($handle, $cursor--, SEEK_END);
             $char = fgetc($handle);
@@ -227,7 +230,7 @@ class MsCsv
      * Get last record of CSV file using MS Excel notation.
      *
      * @param resource $handle File handler
-     * @return string Last line of file
+     * @return array Last line of file
      */
     public static function fGetCsvLastLine($handle)
     {
@@ -238,6 +241,7 @@ class MsCsv
         /**
          * Trim trailing newline chars of the file
          */
+        $char = null;
         while (true) {
             fseek($handle, $cursor--, SEEK_END);
             $char = fgetc($handle);
