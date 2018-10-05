@@ -1,12 +1,12 @@
 <?php
 /**
- * MIT License
+ * MIT License.
  *
- * @package FoxyTools;
  * @author Andrey Khrolenok <andrey@khrolenok.ru>
  * @copyright Copyright (c) 2017 Andrey Khrolenok
  * @license MIT
- * @link https://github.com/Limych/foxy-tools
+ *
+ * @see https://github.com/Limych/foxy-tools
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 namespace FoxyTools;
 
 use Doctrine\Common\Cache\Cache;
 
 class Fetcher
 {
-
     protected $config = array(
         'timeout'               => 10,
         'proxies'               => array(),
@@ -65,7 +65,7 @@ class Fetcher
 
         if (! empty($config['proxylistUrl'])) {
             $list = $config['proxylistUrl'];
-            if (! is_array($list)) {
+            if (! \is_array($list)) {
                 $list = array($list);
             }
             foreach ($list as $url) {
@@ -78,13 +78,18 @@ class Fetcher
         }
     }
 
+    /**
+     * @param null $option
+     *
+     * @return array|mixed
+     */
     public function getConfig($option = null)
     {
         if (! empty($option)) {
             return $this->config[$option];
-        } else {
-            return $this->config;
         }
+
+        return $this->config;
     }
 
     protected $proxyHits = 0;
@@ -95,7 +100,7 @@ class Fetcher
 
         if ($this->proxyHits <= 0) {
             do {
-                $cnt = count($this->config['proxies']);
+                $cnt = \count($this->config['proxies']);
                 if (! empty($cnt)) {
                     $key = rand(0, $cnt - 1);
                     $proxy = $this->config['proxies'][$key];
@@ -108,7 +113,7 @@ class Fetcher
                         }
                         try {
                             $res = $proxyChecker->checkProxy($proxy);
-                            if (! in_array($res['proxy_level'], $this->config['allowedProxyLevels'])) {
+                            if (! \in_array($res['proxy_level'], $this->config['allowedProxyLevels'], true)) {
                                 array_splice($this->config['proxies'], $key, 1);
                                 continue;
                             }
@@ -124,6 +129,7 @@ class Fetcher
         }
 
         $this->proxyHits--;
+
         return $proxy;
     }
 
@@ -136,6 +142,11 @@ class Fetcher
     protected $lastUserAgent;
     protected $identityHits;
 
+    /**
+     * @throws \Exception
+     *
+     * @return array
+     */
     public function getCurlIdentity()
     {
         $options = array();
@@ -162,11 +173,22 @@ class Fetcher
         return $options;
     }
 
+    /**
+     * @return mixed
+     */
     public function httpCode()
     {
         return \curl_getinfo($this->curl, CURLINFO_HTTP_CODE);
     }
 
+    /**
+     * @param $url
+     * @param array $postFields
+     *
+     * @throws \Exception
+     *
+     * @return bool|mixed|string
+     */
     public function fetch($url, array $postFields = array())
     {
         static $errors = 0;
@@ -175,7 +197,7 @@ class Fetcher
             throw new \InvalidArgumentException('Page URL MUST be defined.');
         }
 
-        $cache_id = hash('sha256', $url . json_encode($postFields));
+        $cache_id = hash('sha256', $url.json_encode($postFields));
 
         /** @var FetcherCacheInterface $cache */
         $cache = empty($this->config['cache']) ? null : $this->config['cache'];
@@ -190,17 +212,17 @@ class Fetcher
         }
 
         $options = array(
-            CURLOPT_URL => $url,
-            CURLOPT_TIMEOUT => $this->config['timeout'],
+            CURLOPT_URL            => $url,
+            CURLOPT_TIMEOUT        => $this->config['timeout'],
             CURLOPT_CONNECTTIMEOUT => $this->config['timeout'],
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_COOKIEFILE => '',
-            CURLOPT_HEADER => true,
+            CURLOPT_COOKIEFILE     => '',
+            CURLOPT_HEADER         => true,
 
             // Follow 'Location:'
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_AUTOREFERER => true,
-            CURLOPT_MAXREDIRS => 20,
+            CURLOPT_AUTOREFERER    => true,
+            CURLOPT_MAXREDIRS      => 20,
         );
         $options = array_replace($options, $this->getCurlIdentity());
 
@@ -223,14 +245,14 @@ class Fetcher
         }
 
         $headers_size = curl_getinfo($this->curl, CURLINFO_HEADER_SIZE);
-        $headers = substr($content, 0, $headers_size);
-        $content = substr($content, $headers_size);
+        $headers = mb_substr($content, 0, $headers_size);
+        $content = mb_substr($content, $headers_size);
 
         $headers = $this->parseCurlHeaders($headers);
         $headers = end($headers);
 
         if ($cache) {
-            $lifetime = array( $this->config['cacheMinLifetime'] );
+            $lifetime = array($this->config['cacheMinLifetime']);
             if (isset($headers['cache-control'])
                 && preg_match('/(s-)?max-age=(\d+)/', $headers['cache-control'], $matches)
             ) {
@@ -250,16 +272,18 @@ class Fetcher
     }
 
     /**
-     * Fetch content by URL
+     * Fetch content by URL.
      *
      * @param string $url
-     * @param array $postFields
-     * @param array $config
+     * @param array  $postFields
+     * @param array  $config
+     *
      * @return string
      */
     public static function fetchUrl($url, array $postFields = array(), array $config = array())
     {
         $fetcher = new self($config);
+
         return $fetcher->fetch($url, $postFields);
     }
 
@@ -272,13 +296,13 @@ class Fetcher
 
         // Loop of response headers. The "count() - 1" is to
         // avoid an empty row for the extra line break before the body of the response.
-        for ($index = 0; $index < count($arrRequests) - 1; $index++) {
+        for ($index = 0; $index < \count($arrRequests) - 1; $index++) {
             foreach (explode("\r\n", $arrRequests[$index]) as $i => $line) {
-                if ($i === 0) {
+                if (0 === $i) {
                     $headers[$index]['http_code'] = $line;
                 } else {
-                    list ($key, $value) = explode(': ', $line);
-                    $headers[$index][strtolower($key)] = $value;
+                    list($key, $value) = explode(': ', $line);
+                    $headers[$index][mb_strtolower($key)] = $value;
                 }
             }
         }
