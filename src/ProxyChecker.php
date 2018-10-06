@@ -43,18 +43,18 @@ class ProxyChecker
 
     const DETECTING_TIMEOUT = 1;
 
-    protected $config = array(
+    protected $config = [
         'pingUrl'   => null,
         'timeout'   => 10,
         'pingKey'   => self::PING_KEY,
-        'check'     => array(
+        'check'     => [
             'get',
             'post',
             'cookie',
             'referer',
             'user_agent',
-        ),
-        'request'   => array(
+        ],
+        'request'   => [
             'get_name'      => 'g',
             'get_value'     => 'query',
             'post_name'     => 'p',
@@ -63,23 +63,35 @@ class ProxyChecker
             'cookie_value'  => 'cookie',
             'referer'       => 'http://www.google.com',
             'user_agent'    => 'Mozila/4.0',
-        ),
-    );
+        ],
+    ];
 
     protected $selfIp;
 
-    public function __construct($proxyCheckUrl, array $config = array())
+    /**
+     * ProxyChecker constructor.
+     * @param $proxyCheckUrl
+     * @param array $config
+     */
+    public function __construct($proxyCheckUrl, array $config = [])
     {
         $this->config['pingUrl'] = $proxyCheckUrl;
 
         $this->setConfig($config);
     }
 
+    /**
+     * @param array $config
+     */
     public function setConfig(array $config)
     {
         $this->config = array_merge($this->config, $config);
     }
 
+    /**
+     * @param null $option
+     * @return array|mixed
+     */
     public function getConfig($option = null)
     {
         if (! empty($option)) {
@@ -89,9 +101,13 @@ class ProxyChecker
         return $this->config;
     }
 
+    /**
+     * @param array $proxies
+     * @return array
+     */
     public function checkProxies(array $proxies)
     {
-        $results = array();
+        $results = [];
 
         foreach ($proxies as $proxy) {
             try {
@@ -104,6 +120,11 @@ class ProxyChecker
         return $results;
     }
 
+    /**
+     * @param $proxy
+     * @throws \Exception
+     * @return array
+     */
     public function checkProxy($proxy)
     {
         if (\is_array($proxy)) {
@@ -148,6 +169,10 @@ class ProxyChecker
         return $proxyInfo;
     }
 
+    /**
+     * @param $url
+     * @return array|mixed
+     */
     protected static function parseProxyUrl($url)
     {
         $parsed = parse_url($url);
@@ -163,9 +188,13 @@ class ProxyChecker
         return $parsed;
     }
 
+    /**
+     * @param $proxy
+     * @return array
+     */
     public static function getCurlProxyOptions($proxy)
     {
-        $options = array();
+        $options = [];
         $parsed = self::parseProxyUrl($proxy);
         if ($parsed) {
             if (empty($parsed['scheme'])) {
@@ -197,6 +226,10 @@ class ProxyChecker
         return $options;
     }
 
+    /**
+     * @param $proxy
+     * @return array
+     */
     protected function getProxyContent($proxy)
     {
         $ch = \curl_init();
@@ -211,13 +244,13 @@ class ProxyChecker
                 $this->config['request']['get_value'];
         }
 
-        $options = array(
+        $options = [
             CURLOPT_URL            => $checker_url,
             CURLOPT_HEADER         => true,
             CURLOPT_TIMEOUT        => $this->config['timeout'],
             CURLOPT_CONNECTTIMEOUT => $this->config['timeout'],
             CURLOPT_RETURNTRANSFER => true,
-        );
+        ];
         $options = array_replace($options, self::getCurlProxyOptions($proxy));
 
         if (empty($options[CURLOPT_PROXY])) {
@@ -230,9 +263,9 @@ class ProxyChecker
             && ! empty($this->config['request']['post_value'])
         ) {
             $options[CURLOPT_POST] = true;
-            $options[CURLOPT_POSTFIELDS] = array(
+            $options[CURLOPT_POSTFIELDS] = [
                 $this->config['request']['post_name'] => $this->config['request']['post_value'],
-            );
+            ];
         }
 
         // Check cookie
@@ -263,9 +296,13 @@ class ProxyChecker
         $content = \curl_exec($ch);
         $info = \curl_getinfo($ch);
 
-        return array($content, $info);
+        return [$content, $info];
     }
 
+    /**
+     * @param null $headers
+     * @return bool
+     */
     public static function hasProxyHeaders($headers = null)
     {
         if (empty($headers)) {
@@ -283,6 +320,12 @@ class ProxyChecker
         return ! empty($found);
     }
 
+    /**
+     * @param $content
+     * @param $info
+     * @throws \Exception
+     * @return array
+     */
     protected function checkProxyContent($content, $info)
     {
         if (empty($content)) {
@@ -311,8 +354,8 @@ class ProxyChecker
             throw new \Exception('Code invalid: '.$info['http_code']);
         }
 
-        $allowed = array();
-        $disallowed = array();
+        $allowed = [];
+        $disallowed = [];
 
         // Detect allowed methods
         foreach ($this->config['check'] as $test) {
@@ -355,12 +398,12 @@ class ProxyChecker
             )
         );
 
-        return array(
+        return [
             'allowed'     => $allowed,
             'disallowed'  => $disallowed,
             'proxy_level' => $proxyLevel,
             'info'        => $info,
-        );
+        ];
     }
 
     /**
@@ -378,13 +421,13 @@ class ProxyChecker
         @header('Cache-Control: post-check=0, pre-check=0', false);
         @header('Pragma: no-cache');
 
-        $output = json_encode(array(
+        $output = json_encode([
             'check'     => self::PING_CHECK,
             '_SERVER'   => $_SERVER,
             '_GET'      => $_GET,
             '_POST'     => $_POST,
             '_COOKIE'   => $_COOKIE,
-        ));
+        ]);
 
         if (! empty($pingKey)) {
             $output = @openssl_encrypt($output, self::PING_CRYPT, $pingKey);
@@ -393,6 +436,12 @@ class ProxyChecker
         die($_SERVER['REMOTE_ADDR'].self::PING_SEPARATOR.$output);
     }
 
+    /**
+     * @param $host
+     * @param int $port
+     * @param int $timeout
+     * @return bool
+     */
     public static function isSocks5($host, $port = 1080, $timeout = self::DETECTING_TIMEOUT)
     {
         if (false !== mb_strpos($host, ':')) {
@@ -420,6 +469,12 @@ class ProxyChecker
         return "\x05\x00" === $res;
     }
 
+    /**
+     * @param $host
+     * @param int $port
+     * @param int $timeout
+     * @return bool
+     */
     public static function isSocks4($host, $port = 1080, $timeout = self::DETECTING_TIMEOUT)
     {
         if (false !== mb_strpos($host, ':')) {
@@ -443,6 +498,12 @@ class ProxyChecker
         return ! empty($res) && (8 === \mb_strlen($res)) && "\x00" === $res[0] && ("\x5A" === $res[1]);
     }
 
+    /**
+     * @param $host
+     * @param int $port
+     * @param int $timeout
+     * @return bool
+     */
     public static function isHttp($host, $port = 3128, $timeout = self::DETECTING_TIMEOUT)
     {
         if (false !== mb_strpos($host, ':')) {
@@ -466,6 +527,12 @@ class ProxyChecker
         return ! empty($res) && (9 === \mb_strlen($res)) && ('HTTP/1.1 ' === $res);
     }
 
+    /**
+     * @param $host
+     * @param int $port
+     * @param int $timeout
+     * @return string
+     */
     public static function detectProxyType($host, $port = 3128, $timeout = self::DETECTING_TIMEOUT)
     {
         if (false !== mb_strpos($host, ':')) {
@@ -483,15 +550,20 @@ class ProxyChecker
         }
     }
 
+    /**
+     * @param null $host
+     * @param int $timeout
+     * @return array
+     */
     public static function portscan($host = null, $timeout = self::DETECTING_TIMEOUT)
     {
         if (empty($host)) {
             $host = $_SERVER['REMOTE_ADDR'];
         }
 
-        $proxies = array();
+        $proxies = [];
 
-        $ports = array(8080, 80, 81, 1080, 6588, 8000, 3128, 553, 554, 4480);
+        $ports = [8080, 80, 81, 1080, 6588, 8000, 3128, 553, 554, 4480];
         shuffle($ports);
         foreach ($ports as $port) {
             $type = self::detectProxyType($host, $port, $timeout);

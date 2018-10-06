@@ -27,7 +27,7 @@ if ('/ping' === $request_path) {
 // Ignore connection-closing by the client/user
 ignore_user_abort(true);
 
-$proxyList = array();
+$proxyList = [];
 if (file_exists(PROXYLIST_FPATH)) {
     $proxyList = json_decode(file_get_contents(PROXYLIST_FPATH), true);
 }
@@ -132,10 +132,10 @@ endif;  // $_REQUEST['touch']
 
 $old_queue = $queue = file_exists(QUEUE_FPATH)
     ? json_decode(file_get_contents(QUEUE_FPATH), true)
-    : array();
+    : [];
 $old_checked = $checked = file_exists(CHECKED_FPATH)
     ? json_decode(file_get_contents(CHECKED_FPATH), true)
-    : array();
+    : [];
 
 $addr = ! empty($_REQUEST['touch']) ? $_REQUEST['touch'] : $_SERVER['REMOTE_ADDR'];
 if (empty($queue[$addr]) && (empty($checked[$addr]) || ($checked[$addr] + CHECKED_TIMEOUT <= time()))) {
@@ -183,13 +183,13 @@ if ($proxyList !== $old_proxyList) {
 
 function fetchFromPublicList($count = 12)
 {
-    $servers = array('https://www.socks-proxy.net/', 'https://free-proxy-list.net/');
+    $servers = ['https://www.socks-proxy.net/', 'https://free-proxy-list.net/'];
     shuffle($servers);
     $content = file_get_contents($servers[0]);
     if (preg_match_all('!<td>(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})</td><td>(\d{2,5})</td>!',
         $content, $matches, PREG_SET_ORDER
     )) {
-        $tmp = array();
+        $tmp = [];
         array_shift($matches);
         foreach ($matches as $match) {
             $tmp[] = $match[1].':'.$match[2];
@@ -219,13 +219,13 @@ function check($proxy)
     }
     try {
         $proxyInfo = $checker->checkProxy($proxy);
-        $proxyList[$proxyInfo['proxy']] = array(
+        $proxyList[$proxyInfo['proxy']] = [
             'proxy'        => $proxyInfo['proxy'],
             'checked_at'   => time(),
             'proxy_level'  => $proxyInfo['proxy_level'],
             'request_time' => $proxyInfo['info']['total_time'],
             'allowed'      => $proxyInfo['allowed'],
-        );
+        ];
     } catch (\Exception $ex) {
         $error = $ex->getMessage();
 

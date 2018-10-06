@@ -31,7 +31,7 @@ namespace FoxyTools;
 class UserAgents
 {
 
-    public static $userAgents = array(
+    public static $userAgents = [
         // Top 50 User-Agents for 2018-10-06
         'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36' => 9259197,
         'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko' => 655367,
@@ -83,7 +83,7 @@ class UserAgents
         'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:30.0) Gecko/20100101 Firefox/30.0' => 97241,
         'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; WOW64; Trident/6.0)' => 97055,
         'Mozilla/5.0 (Windows NT 6.3; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0' => 96975,
-    );
+    ];
 
     /**
      * @return string

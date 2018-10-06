@@ -7,7 +7,7 @@ $finder = PhpCsFixer\Finder::create()
 return PhpCsFixer\Config::create()
     ->setRiskyAllowed(true)
     ->setRules([
-        'array_syntax' => ['syntax' => 'long'],
+        'array_syntax' => ['syntax' => 'short'],
         'array_indentation' => true,
 //        'binary_operator_spaces' => ['operators' => ['=>' => 'align']],
         'increment_style' => ['style' => 'post'],

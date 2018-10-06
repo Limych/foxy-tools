@@ -55,7 +55,7 @@ class MsCsv
      */
     protected static function isAssoc($array)
     {
-        if (! \is_array($array) || array() === $array) {
+        if (! \is_array($array) || [] === $array) {
             return false;
         }
 
@@ -168,7 +168,7 @@ class MsCsv
      */
     public static function fGetCsvIterated($handle, callable $callback, $startId = null, $getHeaders = false)
     {
-        $headers = array();
+        $headers = [];
         if (false !== $getHeaders) {
             $seek = ftell($handle);
             fseek($handle, 0, SEEK_SET);
