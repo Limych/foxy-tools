@@ -1,12 +1,12 @@
 <?php
 /**
- * MIT License
+ * MIT License.
  *
- * @package FoxyTools;
  * @author Andrey Khrolenok <andrey@khrolenok.ru>
  * @copyright Copyright (c) 2017 Andrey Khrolenok
  * @license MIT
- * @link https://github.com/Limych/foxy-tools
+ *
+ * @see https://github.com/Limych/foxy-tools
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,47 +26,72 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
 namespace FoxyTools;
 
 use Doctrine\Common\Cache\Cache;
 
 class Fetcher
 {
-
-    protected $config = array(
+    /**
+     * @var array Default config options.
+     */
+    protected $config = [
         'timeout'               => 10,
-        'proxies'               => array(),
+        'proxies'               => [],
         'requireProxy'          => true,
         'proxylistUrl'          => null,
         'proxyPingUrl'          => null,
-        'allowedProxyLevels'    => array('anonymous', 'elite'),
+        'allowedProxyLevels'    => ['anonymous', 'elite'],
         'userAgent'             => null,
+        'cookieFile'            => null,
         'cache'                 => null,
         'cacheMinLifetime'      => 86400,   // 1 day
-    );
+    ];
 
+    /**
+     * @var resource Instance of CURL
+     */
     protected $curl;
 
-    public function __construct(array $config = array())
+    /**
+     * Fetcher constructor.
+     *
+     * @param array $config
+     */
+    public function __construct(array $config = [])
     {
         $this->setConfig($config);
 
-        $this->curl = \curl_init();
+        $this->curl = curl_init();
     }
 
+    /**
+     * Fetcher destructor.
+     */
     public function __destruct()
     {
-        \curl_close($this->curl);
+        curl_close($this->curl);
     }
 
-    public function setConfig(array $config)
+    /**
+     * Set config value(s).
+     *
+     * @param array|string $config
+     * @param mixed $value
+     */
+    public function setConfig($config, $value = null)
     {
+        if (! is_array($config)) {
+            $config = [$config => $value];
+        }
+
         $this->config = array_merge($this->config, $config);
 
         if (! empty($config['proxylistUrl'])) {
             $list = $config['proxylistUrl'];
             if (! is_array($list)) {
-                $list = array($list);
+                $list = [$list];
             }
             foreach ($list as $url) {
                 $proxies = @file_get_contents($url);
@@ -78,17 +103,37 @@ class Fetcher
         }
     }
 
-    public function getConfig($option = null)
+    /**
+     * Return config option or default value if it's defined.
+     *
+     * @param string $option
+     * @param mixed|callable $default
+     * @return array|mixed
+     */
+    public function getConfig($option = null, $default = null)
     {
         if (! empty($option)) {
-            return $this->config[$option];
-        } else {
-            return $this->config;
+            if (! is_null($this->config[$option])) {
+                return $this->config[$option];
+            } elseif (is_callable($default)) {
+                return call_user_func($default, $option, $this->config);
+            }
+            return $default;
         }
+
+        return $this->config;
     }
 
+    /**
+     * @var int Counter of available requests to the current proxy before it changes
+     */
     protected $proxyHits = 0;
 
+    /**
+     * Get current proxy settings. Changing proxy if it needed.
+     *
+     * @return string
+     */
     public function getProxy()
     {
         static $proxy;
@@ -108,7 +153,7 @@ class Fetcher
                         }
                         try {
                             $res = $proxyChecker->checkProxy($proxy);
-                            if (! in_array($res['proxy_level'], $this->config['allowedProxyLevels'])) {
+                            if (! in_array($res['proxy_level'], $this->config['allowedProxyLevels'], true)) {
                                 array_splice($this->config['proxies'], $key, 1);
                                 continue;
                             }
@@ -124,9 +169,13 @@ class Fetcher
         }
 
         $this->proxyHits--;
+
         return $proxy;
     }
 
+    /**
+     * Force to changing proxy at next access.
+     */
     public function forceChangeIdentity()
     {
         $this->proxyHits = 0;
@@ -134,11 +183,19 @@ class Fetcher
 
     protected $lastProxy;
     protected $lastUserAgent;
+    protected $lastCookieFile;
     protected $identityHits;
 
-    public function getCurlIdentity()
+    /**
+     * Get CURL options to imitate common browser.
+     *
+     * @throws \Exception
+     *
+     * @return array
+     */
+    protected function getCurlIdentity()
     {
-        $options = array();
+        $options = [];
 
         $proxy = $this->getProxy();
         if (! empty($proxy)) {
@@ -149,25 +206,44 @@ class Fetcher
         if ($this->lastProxy !== $proxy) {
             $this->lastProxy = $proxy;
             $this->identityHits = 0;
-            if (! empty($this->config['userAgent'])) {
-                $this->lastUserAgent = $this->config['userAgent'];
-            } else {
-                $this->lastUserAgent = UserAgents::getRandom();
-            }
+            $this->lastUserAgent = $this->getConfig('userAgent', [UserAgents::class, 'getRandom']);
+            $this->lastCookieFile = $this->getConfig('cookieFile', function () {
+                foreach ([sys_get_temp_dir(), $_SERVER['HOME'] . '/tmp', session_save_path(), '/tmp'] as $dir) {
+                    $fpath = realpath($dir . '/cookies_' . md5($this->lastUserAgent));
+                    if (false !== $f = @fopen($fpath, 'a+')) {
+                        ftruncate($f, 0);
+                        fclose($f);
+                        return $fpath;
+                    }
+                }
+                return '';
+            });
         }
         $options[CURLOPT_USERAGENT] = $this->lastUserAgent;
+        $options[CURLOPT_COOKIEJAR] = $options[CURLOPT_COOKIEFILE] = $this->lastCookieFile;
 
         $this->identityHits++;
 
         return $options;
     }
 
+    /**
+     * @return mixed
+     */
     public function httpCode()
     {
-        return \curl_getinfo($this->curl, CURLINFO_HTTP_CODE);
+        return curl_getinfo($this->curl, CURLINFO_HTTP_CODE);
     }
 
-    public function fetch($url, array $postFields = array())
+    /**
+     * @param $url
+     * @param array $postFields
+     *
+     * @throws \Exception
+     *
+     * @return bool|mixed|string
+     */
+    public function fetch($url, array $postFields = [])
     {
         static $errors = 0;
 
@@ -175,7 +251,7 @@ class Fetcher
             throw new \InvalidArgumentException('Page URL MUST be defined.');
         }
 
-        $cache_id = hash('sha256', $url . json_encode($postFields));
+        $cache_id = hash('sha256', $url.json_encode($postFields));
 
         /** @var FetcherCacheInterface $cache */
         $cache = empty($this->config['cache']) ? null : $this->config['cache'];
@@ -189,19 +265,20 @@ class Fetcher
             }
         }
 
-        $options = array(
-            CURLOPT_URL => $url,
-            CURLOPT_TIMEOUT => $this->config['timeout'],
+        $options = [
+            CURLOPT_URL            => $url,
+            CURLOPT_TIMEOUT        => $this->config['timeout'],
             CURLOPT_CONNECTTIMEOUT => $this->config['timeout'],
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_COOKIEFILE => '',
-            CURLOPT_HEADER => true,
+            CURLOPT_HEADER         => true,
+            CURLOPT_COOKIEFILE     => '',
+            CURLOPT_COOKIEJAR      => '',
 
             // Follow 'Location:'
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_AUTOREFERER => true,
-            CURLOPT_MAXREDIRS => 20,
-        );
+            CURLOPT_AUTOREFERER    => true,
+            CURLOPT_MAXREDIRS      => 20,
+        ];
         $options = array_replace($options, $this->getCurlIdentity());
 
         if (! empty($postFields)) {
@@ -210,27 +287,27 @@ class Fetcher
             $options[CURLOPT_POSTREDIR] = 3;
         }
 
-        \curl_setopt_array($this->curl, $options);
+        curl_setopt_array($this->curl, $options);
 
         if ($this->identityHits <= 1) {
             $errors = 0;
         }
-        if (false === $content = \curl_exec($this->curl)) {
+        if (false === $content = curl_exec($this->curl)) {
             if (++$errors >= 3) {
                 $this->forceChangeIdentity();
             }
-            throw new \Exception(\curl_error($this->curl), \curl_errno($this->curl));
+            throw new \Exception(curl_error($this->curl), curl_errno($this->curl));
         }
 
         $headers_size = curl_getinfo($this->curl, CURLINFO_HEADER_SIZE);
-        $headers = substr($content, 0, $headers_size);
-        $content = substr($content, $headers_size);
+        $headers = mb_substr($content, 0, $headers_size);
+        $content = mb_substr($content, $headers_size);
 
         $headers = $this->parseCurlHeaders($headers);
         $headers = end($headers);
 
         if ($cache) {
-            $lifetime = array( $this->config['cacheMinLifetime'] );
+            $lifetime = [$this->config['cacheMinLifetime']];
             if (isset($headers['cache-control'])
                 && preg_match('/(s-)?max-age=(\d+)/', $headers['cache-control'], $matches)
             ) {
@@ -250,22 +327,29 @@ class Fetcher
     }
 
     /**
-     * Fetch content by URL
+     * Fetch content by URL.
      *
      * @param string $url
      * @param array $postFields
      * @param array $config
+     *
+     * @throws \Exception
      * @return string
      */
-    public static function fetchUrl($url, array $postFields = array(), array $config = array())
+    public static function fetchUrl($url, array $postFields = [], array $config = [])
     {
         $fetcher = new self($config);
+
         return $fetcher->fetch($url, $postFields);
     }
 
+    /**
+     * @param $headerContent
+     * @return array
+     */
     protected function parseCurlHeaders($headerContent)
     {
-        $headers = array();
+        $headers = [];
 
         // Split the string on every "double" new line.
         $arrRequests = explode("\r\n\r\n", $headerContent);
@@ -274,11 +358,11 @@ class Fetcher
         // avoid an empty row for the extra line break before the body of the response.
         for ($index = 0; $index < count($arrRequests) - 1; $index++) {
             foreach (explode("\r\n", $arrRequests[$index]) as $i => $line) {
-                if ($i === 0) {
+                if (0 === $i) {
                     $headers[$index]['http_code'] = $line;
                 } else {
-                    list ($key, $value) = explode(': ', $line);
-                    $headers[$index][strtolower($key)] = $value;
+                    list($key, $value) = explode(': ', $line);
+                    $headers[$index][mb_strtolower($key)] = $value;
                 }
             }
         }

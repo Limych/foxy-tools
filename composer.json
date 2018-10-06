@@ -4,10 +4,11 @@
 	"minimum-stability" : "stable",
 	"license" : "MIT",
 	"require" : {
-		"php" : ">=5.3"
+		"php" : ">=5.5"
 	},
 	"require-dev" : {
-		"doctrine/cache" : "~1.6"
+		"doctrine/cache" : "~1.6",
+		"friendsofphp/php-cs-fixer": "^2.13"
 	},
 	"suggest" : {
 		"doctrine/cache" : "Allow cache http-requests by Fetcher."

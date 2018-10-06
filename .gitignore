@@ -5,6 +5,8 @@ vendor/
 # Configuration files with possibly sensitive information
 
 # Files and folders related to build/test tools
+/.php_cs
+/.php_cs.cache
 
 # Ignore other .gitignore files to allow for personal customizations
 .gitignore
